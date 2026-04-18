@@ -7,19 +7,35 @@ Map::Map():h(0),w(0){
 }
 
 Map::Map(std::string filename){
-    
-    //Load the file
-    //Resize map
-    //Save file information in map
-    //Close file
-}   
+    std::ifstream file(filename);
+    if(!file.is_open()){
+        std::cerr << "Error: no se pudo abrir el archivo " << filename << std::endl;
+        h = 0; w = 0;
+        return;
+    }
+
+    // First line: rows and columns
+    file >> h >> w;
+
+    // Resize the map matrix
+    _map.resize(h, std::vector<int>(w));
+
+    // Read each cell value
+    for(int i = 0; i < h; i++){
+        for(int j = 0; j < w; j++){
+            file >> _map[i][j];
+        }
+    }
+
+    file.close();
+}
 
 Map::Map(const Map& rhs):h(rhs.h),w(rhs.w),_map(rhs._map){
 
 }
 
 Map::~Map(){
-    
+
 }
 
 Map& Map::operator=(const Map& rhs){
@@ -29,7 +45,7 @@ Map& Map::operator=(const Map& rhs){
     _map=rhs._map;
     return *this;
 }
-   
+
 void Map::print() const{
     for(int i=0;i<h;i++){
         for(int j=0;j<w;j++){
@@ -39,6 +55,7 @@ void Map::print() const{
     }
     std::cout<<std::endl;
 }
+
 void Map::print(std::vector<std::pair<int,int>> path) const{
     auto __map=_map;
 
@@ -50,7 +67,6 @@ void Map::print(std::vector<std::pair<int,int>> path) const{
 
     for(int i=0;i<h;i++){
         for(int j=0;j<w;j++){
-
             std::cout<<__map[i][j]<<" ";
         }
         std::cout<<std::endl;

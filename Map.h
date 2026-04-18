@@ -2,25 +2,27 @@
 #include <string>
 #include <vector>
 
+// clase que representa el mapa del laberinto
 class Map{
 
 protected:
-    int h;
-    int w;
-    std::vector<std::vector<int>> _map;
+    int h; // filas del mapa
+    int w; // columnas del mapa
+    std::vector<std::vector<int>> _map; // matriz con los valores del mapa
 
 public:
-    Map();                              //constructs empty map
-    Map(std::string filename);          //constructs from data in a file
-    Map(const Map& rhs);                //copy constructor
-    ~Map();                             //destructor
-    Map& operator=(const Map& rhs);     //assignment operator
-   
-    void print() const;                 //prints map
-    void print(std::vector<std::pair<int,int>>) const; //prints map and path 
+    Map();                              // constructor vacio
+    Map(std::string filename);          // carga el mapa desde un archivo
+    Map(const Map& rhs);                // constructor copia
+    ~Map();                             // destructor
+    Map& operator=(const Map& rhs);     // operador de asignacion
 
-    friend bool operator==(const Map& lhs, const Map& rhs); //declares global operator friend 
-    friend class Search;                //to access protected members. Otherwise, need accessors.
+    void print() const;                               // imprime el mapa
+    void print(std::vector<std::pair<int,int>>) const; // imprime el mapa con el camino
+
+    friend bool operator==(const Map& lhs, const Map& rhs); // para comparar dos mapas
+    friend class Search; // le doy acceso a Search para que pueda leer h, w y _map
 };
 
-bool operator==(const Map& lhs, const Map& rhs);    //returns true if both maps are equivalent
+// retorna true si los dos mapas son iguales
+bool operator==(const Map& lhs, const Map& rhs);

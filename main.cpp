@@ -68,5 +68,9 @@ int main(int argc, char *argv[]){
     std::cout << "Path length (A*): " << (int)pathAstar.size() - 1 << "\n";
     colorMap.print(pathAstar);
 
+    auto pathWAstar = Search::WAstar(map, {x1, y1}, {x2, y2}, 1.5f);
+    std::cout << "Path length (Weighted A*): " << (int)pathWAstar.size() - 1 << "\n";
+    colorMap.print(pathWAstar);
+
     return 0;
 }

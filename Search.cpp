@@ -7,12 +7,13 @@
 #include <cmath>
 #include <functional>
 
+
 namespace std
 {
-    // Needed to store pair<int,int> in unordered containers
-    template<> struct hash<std::pair<int,int>>
+    // Necesitamos esto para usar pair<int,int> como clave en unordered_map
+    template<> struct hash<pair<int,int>>
     {
-        std::size_t operator()(const std::pair<int,int>& p) const noexcept
+        size_t operator()(const pair<int,int>& p) const noexcept
         {
             hash<int> hasher;
             return hasher(p.first) ^ (hasher(p.second) << 1);
@@ -22,57 +23,59 @@ namespace std
 
 // ─────────────────────────────────────────────
 //  reconstruct
-//  Travels the pathCache map from goal back to
-//  start, then reverses the result.
+//  Viaje desde el goal hasta el start usando pathCache, 
+//  luego invierte el resultado para obtener el camino desde el start hasta el goal.
 // ─────────────────────────────────────────────
-std::vector<std::pair<int,int>> Search::reconstruct(
-    const std::unordered_map<std::pair<int,int>,std::pair<int,int>>& pathCache,
-    const std::pair<int,int>& start)
+
+pair <int,int> dirs[]{{-1,0},{0,1},{1,0},{0,-1}}; // arreglo de direcciones para moverse en el grid (arriba, derecha, abajo, izquierda)
+
+vector<pair<int,int>> Search::reconstruct(
+    const unordered_map<pair<int,int>,pair<int,int>>& pathCache,
+    const pair<int,int>& start)
 {
-    std::deque<std::pair<int,int>> nodes;
-    auto node = start; // 'start' here is actually the GOAL node
+    deque<pair<int,int>> nodes;
+    auto node = start; // El 'start' que se pasa a esta función es en realidad el 'goal' encontrado, y se reconstruye hacia atrás hasta llegar al 'start' original.
 
     while(true){
-        nodes.push_front(node);
-        auto it = pathCache.find(node);
-        if(it == pathCache.end()) break; // reached the start (no parent)
-        node = it->second;               // move to parent
+        nodes.push_front(node); // nodes se agregan al frente para evitar invertir al final
+        auto it = pathCache.find(node);  // Asignacion automatica del iterador al resultado de find
+        if(it == pathCache.end()) break; // llegamos al nodo inicial, que no tiene padre en el cache
+        node = it->second;               // Se mueve al padre del nodo actual
     }
 
-    std::vector<std::pair<int,int>> vec(nodes.begin(), nodes.end());
+    vector<pair<int,int>> vec(nodes.begin(), nodes.end());
     return vec;
 }
 
 // ─────────────────────────────────────────────
-//  Heuristic  (Manhattan distance)
+//  Heuristic  (Distancia Manhattan) |x1 - x2| + |y1 - y2|
 // ─────────────────────────────────────────────
-float Search::Heuristic(std::pair<int,int> current, std::pair<int,int> goal)
-{
-    return std::abs(current.first - goal.first) +
-           std::abs(current.second - goal.second);
+float Search::Heuristic(pair<int,int> current, pair<int,int> goal)
+{ 
+    return abs(current.first - goal.first) +
+           abs(current.second - goal.second);
 }
 
 // ─────────────────────────────────────────────
-//  BFS  (Lab 3)
-//  Guarantees shortest path in steps.
+//  BFS
+//  Garantiza el camino más corto en un grid sin pesos, pero puede ser lento en mapas grandes o con muchos obstáculos.
 // ─────────────────────────────────────────────
-std::vector<std::pair<int,int>> Search::BFS(
+vector<pair<int,int>> Search::BFS(
     const Map& map,
-    std::pair<int,int> start,
-    std::pair<int,int> goal)
+    pair<int,int> start,
+    pair<int,int> goal)
 {
-    std::cout << "===========================\nRunning BFS...\n";
-    auto startTime = std::chrono::high_resolution_clock::now();
+    cout << "===========================\nEjecutando BFS...\n";
+    auto startTime = chrono::high_resolution_clock::now();
 
-    std::pair<int,int> dirs[]{{-1,0},{0,1},{1,0},{0,-1}};
 
     bool visited[map.h][map.w];
     for(int i = 0; i < map.h; i++)
         for(int j = 0; j < map.w; j++)
             visited[i][j] = false;
 
-    std::queue<std::pair<int,int>> OPEN;
-    std::unordered_map<std::pair<int,int>,std::pair<int,int>> pathCache; // child -> parent
+    queue<pair<int,int>> OPEN;
+    unordered_map<pair<int,int>,pair<int,int>> pathCache; // HIjo -> Padre
 
     OPEN.push(start);
     visited[start.first][start.second] = true;
@@ -81,20 +84,20 @@ std::vector<std::pair<int,int>> Search::BFS(
         auto pos = OPEN.front();
         OPEN.pop();
 
-        if(pos == goal){
-            auto endTime = std::chrono::high_resolution_clock::now();
+        if(pos == goal){ // Si encontramos el objetivo, reconstruimos el camino y terminamos
+            auto endTime = chrono::high_resolution_clock::now();
             int count = 0;
             for(int i = 0; i < map.h; i++)
                 for(int j = 0; j < map.w; j++)
                     if(visited[i][j]) count++;
-            std::cout << "VISITED: " << count << std::endl;
-            std::cout << "OPEN: "    << OPEN.size() << std::endl;
-            std::cout << "FOUND in " << (endTime-startTime).count()/1000000.0 << "ms\n";
+            cout << " NODOS VISITADOS: " << count << endl;
+            cout << "NODOS DISPONIBLES: "    << OPEN.size() << endl;
+            cout << "Encontrado en " << (endTime-startTime).count()/1000000.0 << "ms\n";
             return reconstruct(pathCache, pos);
         }
 
         for(auto dir : dirs){
-            std::pair<int,int> next = {pos.first + dir.first, pos.second + dir.second};
+            pair<int,int> next = {pos.first + dir.first, pos.second + dir.second};
 
             // Bounds check
             if(next.first < 0 || next.first >= map.h ||
@@ -111,8 +114,8 @@ std::vector<std::pair<int,int>> Search::BFS(
         }
     }
 
-    std::cout << "NOT FOUND!!!!\n";
-    std::vector<std::pair<int,int>> path;
+    cout << "!Camino no encontrado!\n";
+    vector<pair<int,int>> path;
     path.push_back(start);
     path.push_back(goal);
     return path;
@@ -120,44 +123,43 @@ std::vector<std::pair<int,int>> Search::BFS(
 
 // ─────────────────────────────────────────────
 //  Greedy Best-First Search  (Lab 4)
-//  Expands the node with the lowest h(n).
+//  Expande el nodo que parece estar más cerca del objetivo según la heurística, 
+//  pero no garantiza el camino más corto y puede quedar atrapado en callejones sin salida.
 // ─────────────────────────────────────────────
-std::vector<std::pair<int,int>> Search::Greedy(
+vector<pair<int,int>> Search::Greedy(
     const Map& map,
-    std::pair<int,int> start,
-    std::pair<int,int> goal)
+    pair<int,int> start,
+    pair<int,int> goal)
 {
-    std::cout << "===========================\nRunning Greedy BFS...\n";
-    auto startTime = std::chrono::high_resolution_clock::now();
+    cout << "===========================\nEjecutando Greedy BFS...\n";
+    auto startTime = chrono::high_resolution_clock::now();
 
-    std::pair<int,int> dirs[]{{-1,0},{0,1},{1,0},{0,-1}};
+    // Cola de Prioridad: min-heap por h(n)
+    // Elemento: { h_valor, posicion }
+    using Node = pair<float, pair<int,int>>;
+    priority_queue<Node, vector<Node>, greater<Node>> OPEN;
 
-    // Priority queue: min-heap by heuristic value
-    // Element: { h_value, position }
-    using Node = std::pair<float, std::pair<int,int>>;
-    std::priority_queue<Node, std::vector<Node>, std::greater<Node>> OPEN;
-
-    std::unordered_map<std::pair<int,int>, std::pair<int,int>> pathCache; // child -> parent
-    std::unordered_map<std::pair<int,int>, bool> visited;
+    unordered_map<pair<int,int>, pair<int,int>> pathCache; // hijo -> padre
+    unordered_map<pair<int,int>, bool> visited;
 
     OPEN.push({Heuristic(start, goal), start});
     visited[start] = true;
 
-    while(!OPEN.empty()){
-        std::pair<float, std::pair<int,int>> top = OPEN.top();
+    while(!OPEN.empty()){ // Mientras haya nodos por expandir
+        pair<float, pair<int,int>> top = OPEN.top();
         OPEN.pop();
-        std::pair<int,int> pos = top.second;
+        pair<int,int> pos = top.second;
 
-        if(pos == goal){
-            auto endTime = std::chrono::high_resolution_clock::now();
-            std::cout << "VISITED: " << visited.size() << std::endl;
-            std::cout << "OPEN: "    << OPEN.size() << std::endl;
-            std::cout << "FOUND in " << (endTime-startTime).count()/1000000.0 << "ms\n";
+        if(pos == goal){ // Si encontramos el objetivo, reconstruimos el camino y terminamos
+            auto endTime = chrono::high_resolution_clock::now(); // tiempo de finalización
+            cout << " NODOS VISITADOS: " << visited.size() << endl; // cantidad de nodos visitados
+            cout << "NODOS DISPONIBLES: "    << OPEN.size() << endl; // cantidad de nodos aún por expandir
+            cout << "Encontrado en " << (endTime-startTime).count()/1000000.0 << "ms\n"; // tiempo total de ejecución en milisegundos
             return reconstruct(pathCache, pos);
         }
 
-        for(auto dir : dirs){
-            std::pair<int,int> next = {pos.first + dir.first, pos.second + dir.second};
+        for(auto dir : dirs){ // Para cada vecino de pos (arriba, derecha, abajo, izquierda)
+            pair<int,int> next = {pos.first + dir.first, pos.second + dir.second};
 
             if(next.first < 0 || next.first >= map.h ||
                next.second < 0 || next.second >= map.w)
@@ -172,8 +174,8 @@ std::vector<std::pair<int,int>> Search::Greedy(
         }
     }
 
-    std::cout << "NOT FOUND!!!!\n";
-    std::vector<std::pair<int,int>> path;
+    cout << "!Camino no encontrado!\n";
+    vector<pair<int,int>> path;
     path.push_back(start);
     path.push_back(goal);
     return path;
@@ -181,47 +183,48 @@ std::vector<std::pair<int,int>> Search::Greedy(
 
 // ─────────────────────────────────────────────
 //  A*  (Lab 5)
-//  Expands the node with the lowest f = g + h.
+//  Expande el nodo con el menor f = g + h,
+//  donde g es el costo real desde el inicio hasta el nodo, 
+//  y h es la heurística (estimación del costo restante hasta el objetivo).
 // ─────────────────────────────────────────────
-std::vector<std::pair<int,int>> Search::Astar(
+vector<pair<int,int>> Search::Astar(
     const Map& map,
-    std::pair<int,int> start,
-    std::pair<int,int> goal)
+    pair<int,int> start,
+    pair<int,int> goal)
 {
-    std::cout << "===========================\nRunning A*...\n";
-    auto startTime = std::chrono::high_resolution_clock::now();
+    cout << "===========================\nEjecutando A*...\n";
+    auto startTime = chrono::high_resolution_clock::now();
 
-    std::pair<int,int> dirs[]{{-1,0},{0,1},{1,0},{0,-1}};
 
     // Priority queue: min-heap by f = g + h
-    using Node = std::pair<float, std::pair<int,int>>;
-    std::priority_queue<Node, std::vector<Node>, std::greater<Node>> OPEN;
+    using Node = pair<float, pair<int,int>>;
+    priority_queue<Node, vector<Node>, greater<Node>> OPEN;
 
-    std::unordered_map<std::pair<int,int>, std::pair<int,int>> pathCache; // child -> parent
-    std::unordered_map<std::pair<int,int>, float> gCost;                  // real cost so far
-    std::unordered_map<std::pair<int,int>, bool>  closed;                 // closed list
+    unordered_map<pair<int,int>, pair<int,int>> pathCache; // hijo -> padre
+    unordered_map<pair<int,int>, float> gCost;                  // costo real desde el inicio hasta este nodo
+    unordered_map<pair<int,int>, bool>  closed;                 // cerrar nodos ya expandidos
 
     gCost[start] = 0.0f;
     OPEN.push({Heuristic(start, goal), start});
 
-    while(!OPEN.empty()){
-        std::pair<float, std::pair<int,int>> top = OPEN.top();
+    while(!OPEN.empty()){ // Mientras haya nodos por expandir
+        pair<float, pair<int,int>> top = OPEN.top();
         OPEN.pop();
-        std::pair<int,int> pos = top.second;
+        pair<int,int> pos = top.second;
 
-        if(closed.count(pos)) continue; // already expanded with lower cost
+        if(closed.count(pos)) continue; // Expandir los nodos más baratos primero, pero si ya fue cerrado, lo ignoramos
         closed[pos] = true;
 
         if(pos == goal){
-            auto endTime = std::chrono::high_resolution_clock::now();
-            std::cout << "VISITED: " << closed.size() << std::endl;
-            std::cout << "OPEN: "    << OPEN.size() << std::endl;
-            std::cout << "FOUND in " << (endTime-startTime).count()/1000000.0 << "ms\n";
+            auto endTime = chrono::high_resolution_clock::now();
+            cout << " NODOS VISITADOS: " << closed.size() << endl;
+            cout << "NODOS DISPONIBLES: "    << OPEN.size() << endl;
+            cout << "Encontrado en " << (endTime-startTime).count()/1000000.0 << "ms\n";
             return reconstruct(pathCache, pos);
         }
 
-        for(auto dir : dirs){
-            std::pair<int,int> next = {pos.first + dir.first, pos.second + dir.second};
+        for(auto dir : dirs){ // Para cada vecino de pos (arriba, derecha, abajo, izquierda)
+            pair<int,int> next = {pos.first + dir.first, pos.second + dir.second};
 
             if(next.first < 0 || next.first >= map.h ||
                next.second < 0 || next.second >= map.w)
@@ -232,7 +235,7 @@ std::vector<std::pair<int,int>> Search::Astar(
 
             float tentative_g = gCost[pos] + 1.0f; // each step costs 1
 
-            // Only add to OPEN if we found a better (or first) path to 'next'
+            // Solo agregamos a OPEN si encontramos un camino más barato hacia 'next'
             if(!gCost.count(next) || tentative_g < gCost[next]){
                 gCost[next]    = tentative_g;
                 pathCache[next] = pos;
@@ -242,8 +245,80 @@ std::vector<std::pair<int,int>> Search::Astar(
         }
     }
 
-    std::cout << "NOT FOUND!!!!\n";
-    std::vector<std::pair<int,int>> path;
+    cout << "!Camino no encontrado!\n";
+    vector<pair<int,int>> path;
+    path.push_back(start);
+    path.push_back(goal);
+    return path;
+}
+
+vector<pair<int,int>> Search::WAstar(
+    const Map& map,
+    pair<int,int> start,
+    pair<int,int> goal, 
+    float weight){
+
+    cout << "===========================\nEjecutando Weighted A* (w=" << weight << ")...\n";
+    auto startTime = chrono::high_resolution_clock::now(); // Tiempo de Inicio
+
+    typedef pair<float, pair<int,int>> Node; // {f, posicion} creacion del tipo Node para la cola de prioridad
+    
+    priority_queue<Node, vector<Node>, greater<Node>> OPEN; // Cola de prioridad para nodos abiertos
+    
+    unordered_map<pair<int,int>, pair<int,int>> pathCache; // hijo -> padre
+    unordered_map<pair<int,int>, float> gCost;                  // costo real desde el inicio hasta este nodo
+    unordered_map<pair<int,int>, bool>  closed;                 // cerrar nodos ya expandidos
+
+    gCost[start] = 0.0f; // El costo g del nodo inicial es 0
+    OPEN.push({weight * Heuristic(start, goal), start}); // f = w *
+
+    while (!OPEN.empty()) // Mientras haya nodos por expandir
+    {
+        Node top = OPEN.top();
+        OPEN.pop();
+        pair<int,int> pos = top.second;
+
+        if (closed.count(pos)) continue; // Si el nodo ya fue cerrado, lo ignoramos
+        closed[pos] = true; // Marcamos el nodo como cerrado
+
+        if (pos == goal) // Si encontramos el objetivo, reconstruimos el camino y terminamos
+        {
+            auto endTime = chrono::high_resolution_clock::now(); // Tiempo de finalización
+            cout << " NODOS VISITADOS: " << closed.size() << endl; // Cantidad de nodos visitados
+            cout << "NODOS DISPONIBLES: "    << OPEN.size() << endl; // Cantidad de nodos aún por expandir
+            cout << "Encontrado en " << (endTime - startTime).count() / 1000000.0 << "ms\n"; // Tiempo total de ejecución en milisegundos
+            return reconstruct(pathCache, pos); // Reconstrucción del camino desde el nodo objetivo hasta el nodo inicial
+        }
+
+        for(auto dir : dirs) // Para cada vecino de pos (arriba, derecha, abajo, izquierda)
+        {
+            pair<int,int> next = {pos.first + dir.first, pos.second + dir.second}; // Cálculo de la posición del vecino
+
+            // Verificación de límites del mapa
+            if (next.first < 0 || next.first >= map.h || next.second < 0 || next.second >= map.w)
+                continue;
+
+            if (map._map[next.first][next.second] == 1) continue; // Si el vecino es una pared, lo ignoramos
+            if (closed.count(next)) continue; // Si el vecino ya fue cerrado, lo ignoramos
+
+            float tentative_g = gCost[pos] + 1.0f; // Costo tentativo desde el inicio hasta el vecino
+
+            // Solo agregamos a OPEN si encontramos un camino más barato hacia 'next'
+            if (!gCost.count(next) || tentative_g < gCost[next])
+            {
+                gCost[next] = tentative_g; // Actualizamos el costo g para el vecino
+                pathCache[next] = pos; // Actualizamos el padre del vecino en el cache de caminos
+                float f = tentative_g + weight * Heuristic(next, goal); // Cálculo de f = g + w * h
+                OPEN.push({f, next}); // Agregamos el vecino a la cola de prioridad
+            }
+
+        }
+        
+        
+    }
+    
+    cout << "!Camino no encontrado!\n"; // Si se agotan los nodos por expandir sin encontrar el objetivo
+    vector<pair<int,int>> path; // Retorno de un camino vacío (o con start y goal) para indicar que no se encontró un camino válido
     path.push_back(start);
     path.push_back(goal);
     return path;

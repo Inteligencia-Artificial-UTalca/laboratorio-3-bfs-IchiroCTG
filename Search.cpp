@@ -7,6 +7,8 @@
 #include <cmath>
 #include <functional>
 
+const float CDiagonal = 1.41; // Costo de movimiento diagonal (aproximadamente sqrt(2))
+const float COrtogonales = 1.0; // Costo de movimiento ortogonalq
 
 namespace std
 {
@@ -27,7 +29,16 @@ namespace std
 //  luego invierte el resultado para obtener el camino desde el start hasta el goal.
 // ─────────────────────────────────────────────
 
-pair <int,int> dirs[]{{-1,0},{0,1},{1,0},{0,-1}}; // arreglo de direcciones para moverse en el grid (arriba, derecha, abajo, izquierda)
+pair <int,int> dirs[]{ // arreglo de direcciones para moverse en el grid 
+    {-1,0}, // Arriba
+    {-1,1}, // Arriba-Derecha
+    {0,1},  // Derecha
+    {1,1},  // Abajo-Derecha
+    {1,0},  // Abajo
+    {1,-1}, // Abajo-Izquierda
+    {0,-1}, // Izquierda
+    {-1,-1} // Arriba-Izquierda
+}; 
 
 vector<pair<int,int>> Search::reconstruct(
     const unordered_map<pair<int,int>,pair<int,int>>& pathCache,
@@ -48,12 +59,16 @@ vector<pair<int,int>> Search::reconstruct(
 }
 
 // ─────────────────────────────────────────────
-//  Heuristic  (Distancia Manhattan) |x1 - x2| + |y1 - y2|
+//  Heuristic  (Distancia Octile)  D * (dx + dy) + (D2 - 2*D) * min(dx, dy) con D=1 y D2=sqrt(2) para movimientos diagonales
+//  Estimación del costo restante desde 'actual' hasta 'goal', considerando movimientos ortogonales y diagonales en un grid.
 // ─────────────────────────────────────────────
 float Search::Heuristic(pair<int,int> current, pair<int,int> goal)
 { 
-    return abs(current.first - goal.first) +
-           abs(current.second - goal.second);
+    float dx = abs(current.first - goal.first);
+    float dy = abs(current.second - goal.second);
+
+    //mover en diagonal cuesta sqrt(2) y mover en ortogonal cuesta 1, por eso se usa esa formula
+    return COrtogonales * (dx + dy) + (CDiagonal - 2.0f * COrtogonales) * min(dx, dy);
 }
 
 // ─────────────────────────────────────────────
@@ -232,8 +247,13 @@ vector<pair<int,int>> Search::Astar(
 
             if(map._map[next.first][next.second] == 1) continue;
             if(closed.count(next))                      continue;
+            float cost = 0.0f;
+            if(dir.first != 0 && dir.second != 0) // Si es un movimiento diagonal
+                cost = CDiagonal; // Costo de movimiento diagonal
+            else
+                cost = COrtogonales; // Costo de movimiento ortogonal
 
-            float tentative_g = gCost[pos] + 1.0f; // each step costs 1
+            float tentative_g = gCost[pos] + cost; // each step costs 1
 
             // Solo agregamos a OPEN si encontramos un camino más barato hacia 'next'
             if(!gCost.count(next) || tentative_g < gCost[next]){
@@ -300,8 +320,13 @@ vector<pair<int,int>> Search::WAstar(
 
             if (map._map[next.first][next.second] == 1) continue; // Si el vecino es una pared, lo ignoramos
             if (closed.count(next)) continue; // Si el vecino ya fue cerrado, lo ignoramos
-
-            float tentative_g = gCost[pos] + 1.0f; // Costo tentativo desde el inicio hasta el vecino
+            float cost=0.0f;
+            if (dir.first != 0 && dir.second != 0) // Si es un movimiento diagonal
+                cost = CDiagonal; // Costo de movimiento diagonal
+            else
+                cost = COrtogonales; // Costo de movimiento ortogonal
+                
+            float tentative_g = gCost[pos] + cost; // Costo tentativo desde el inicio hasta el vecino
 
             // Solo agregamos a OPEN si encontramos un camino más barato hacia 'next'
             if (!gCost.count(next) || tentative_g < gCost[next])

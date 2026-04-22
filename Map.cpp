@@ -33,6 +33,12 @@ Map::Map(std::string filename){
 Map::Map(const Map& rhs):h(rhs.h),w(rhs.w),_map(rhs._map){
 
 }
+int Map::get_h(){
+    return h;
+}
+int Map::get_w(){
+    return w;
+}
 
 Map::~Map(){
 

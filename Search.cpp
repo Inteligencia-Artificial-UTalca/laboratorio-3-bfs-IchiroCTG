@@ -8,7 +8,8 @@
 #include <functional>
 
 const float CDiagonal = 1.41; // Costo de movimiento diagonal (aproximadamente sqrt(2))
-const float COrtogonales = 1.0; // Costo de movimiento ortogonalq
+const float COrtogonales = 1.0; // Costo de movimiento ortogonales
+const float Umbral = 4; // Diferencia maxima de altura antes de que bajar sea peligroso
 
 namespace std
 {
@@ -40,21 +41,59 @@ pair <int,int> dirs[]{ // arreglo de direcciones para moverse en el grid
     {-1,-1} // Arriba-Izquierda
 }; 
 
+// Se calcula el costo de moverse entre dos celdas, considerando la diferencia de altura y el umbral de seguridad.
+// Si sube cuesta más, si baja cuesta menos, pero si baja más que el umbral, se considera peligroso y se asigna un costo muy alto para evitar ese camino.
+float CalcularCostoMovimiento(float alturaActual, float alturaSiguiente, bool esDiagonal, bool esAltura){
+    float costoBase=0.0f;
+    if(esDiagonal){
+        costoBase = CDiagonal;
+         // Costo base para movimiento diagonal
+    }
+
+    else{
+        // Costo base para movimiento ortogonal
+        costoBase = COrtogonales; 
+    }
+
+    // Si no se considera la altura, el costo es el base sin modificaciones retorna
+    if(!esAltura) return costoBase; 
+    
+    // Diferencia de altura entre la celda actual y la siguiente
+    float diferenciaAltura = alturaSiguiente - alturaActual;  // postivo si sube, negativo si baja
+
+    if(diferenciaAltura>0){
+        // si sube, el costo aumenta proporcionalmente a la diferencia de altura
+        return costoBase + diferenciaAltura; // Costo base + penalización por subir
+    }
+    else{
+        float absDiferencia = abs(diferenciaAltura);
+        if(absDiferencia >= Umbral){
+            // muy empinado, peligroso bajar
+            return costoBase + (absDiferencia- Umbral);
+        }
+        else{
+            // bajada normal, cuesta menos que pero min 0.1 para evitar que bajar sea gratis
+            // Costo base - bonificación por bajar, pero no menos que el costo ortogonal mínimo
+            return max(costoBase - absDiferencia, 0.1f); 
+        }
+    }
+}
+
 vector<pair<int,int>> Search::reconstruct(
     const unordered_map<pair<int,int>,pair<int,int>>& pathCache,
-    const pair<int,int>& start)
+    const pair<int,int>& goal)
 {
-    deque<pair<int,int>> nodes;
-    auto node = start; // El 'start' que se pasa a esta función es en realidad el 'goal' encontrado, y se reconstruye hacia atrás hasta llegar al 'start' original.
+    deque<pair<int,int>> path;
+    auto node = goal; // goal es el nodo final del camino
 
     while(true){
-        nodes.push_front(node); // nodes se agregan al frente para evitar invertir al final
+        path.push_front(node); // path se agregan al frente para evitar invertir al final
         auto it = pathCache.find(node);  // Asignacion automatica del iterador al resultado de find
         if(it == pathCache.end()) break; // llegamos al nodo inicial, que no tiene padre en el cache
         node = it->second;               // Se mueve al padre del nodo actual
     }
 
-    vector<pair<int,int>> vec(nodes.begin(), nodes.end());
+    vector<pair<int,int>> vec(path.begin(), path.end());
     return vec;
 }
 
@@ -84,13 +123,9 @@ vector<pair<int,int>> Search::BFS(
     auto startTime = chrono::high_resolution_clock::now();
 
 
-    bool visited[map.h][map.w];
-    for(int i = 0; i < map.h; i++)
-        for(int j = 0; j < map.w; j++)
-            visited[i][j] = false;
-
+    std::vector<std::vector<bool>> visited(map.h, std::vector<bool>(map.w, false));
     queue<pair<int,int>> OPEN;
-    unordered_map<pair<int,int>,pair<int,int>> pathCache; // HIjo -> Padre
+    unordered_map<pair<int,int>,pair<int,int>> pathCache; // Hijo -> Padre
 
     OPEN.push(start);
     visited[start.first][start.second] = true;
@@ -105,8 +140,8 @@ vector<pair<int,int>> Search::BFS(
             for(int i = 0; i < map.h; i++)
                 for(int j = 0; j < map.w; j++)
                     if(visited[i][j]) count++;
-            cout << " NODOS VISITADOS: " << count << endl;
-            cout << "NODOS DISPONIBLES: "    << OPEN.size() << endl;
+            cout << "NODOS VISITADOS: " << count << endl;
+            cout << "NODOS ABIERTOS: "    << OPEN.size() << endl;
             cout << "Encontrado en " << (endTime-startTime).count()/1000000.0 << "ms\n";
             return reconstruct(pathCache, pos);
         }
@@ -120,7 +155,7 @@ vector<pair<int,int>> Search::BFS(
                 continue;
 
             // Wall or already visited
-            if(map._map[next.first][next.second] == 1) continue;
+            //if(map._map[next.first][next.second] == 1) continue;
             if(visited[next.first][next.second])        continue;
 
             visited[next.first][next.second] = true;
@@ -161,14 +196,14 @@ vector<pair<int,int>> Search::Greedy(
     visited[start] = true;
 
     while(!OPEN.empty()){ // Mientras haya nodos por expandir
-        pair<float, pair<int,int>> top = OPEN.top();
+        Node top = OPEN.top();
         OPEN.pop();
         pair<int,int> pos = top.second;
 
         if(pos == goal){ // Si encontramos el objetivo, reconstruimos el camino y terminamos
             auto endTime = chrono::high_resolution_clock::now(); // tiempo de finalización
-            cout << " NODOS VISITADOS: " << visited.size() << endl; // cantidad de nodos visitados
-            cout << "NODOS DISPONIBLES: "    << OPEN.size() << endl; // cantidad de nodos aún por expandir
+            cout << "NODOS VISITADOS: " << visited.size() << endl; // cantidad de nodos visitados
+            cout << "NODOS ABIERTOS: "    << OPEN.size() << endl; // cantidad de nodos aún por expandir
             cout << "Encontrado en " << (endTime-startTime).count()/1000000.0 << "ms\n"; // tiempo total de ejecución en milisegundos
             return reconstruct(pathCache, pos);
         }
@@ -180,7 +215,7 @@ vector<pair<int,int>> Search::Greedy(
                next.second < 0 || next.second >= map.w)
                 continue;
 
-            if(map._map[next.first][next.second] == 1) continue;
+            //if(map._map[next.first][next.second] == 1) continue;
             if(visited.count(next))                     continue;
 
             visited[next] = true;
@@ -205,7 +240,8 @@ vector<pair<int,int>> Search::Greedy(
 vector<pair<int,int>> Search::Astar(
     const Map& map,
     pair<int,int> start,
-    pair<int,int> goal)
+    pair<int,int> goal,
+    bool esAltura)
 {
     cout << "===========================\nEjecutando A*...\n";
     auto startTime = chrono::high_resolution_clock::now();
@@ -223,7 +259,7 @@ vector<pair<int,int>> Search::Astar(
     OPEN.push({Heuristic(start, goal), start});
 
     while(!OPEN.empty()){ // Mientras haya nodos por expandir
-        pair<float, pair<int,int>> top = OPEN.top();
+        Node top = OPEN.top();
         OPEN.pop();
         pair<int,int> pos = top.second;
 
@@ -232,8 +268,8 @@ vector<pair<int,int>> Search::Astar(
 
         if(pos == goal){
             auto endTime = chrono::high_resolution_clock::now();
-            cout << " NODOS VISITADOS: " << closed.size() << endl;
-            cout << "NODOS DISPONIBLES: "    << OPEN.size() << endl;
+            cout << "NODOS VISITADOS: " << closed.size() << endl;
+            cout << "NODOS ABIERTOS: "    << OPEN.size() << endl;
             cout << "Encontrado en " << (endTime-startTime).count()/1000000.0 << "ms\n";
             return reconstruct(pathCache, pos);
         }
@@ -245,23 +281,23 @@ vector<pair<int,int>> Search::Astar(
                next.second < 0 || next.second >= map.w)
                 continue;
 
-            if(map._map[next.first][next.second] == 1) continue;
+            if(!esAltura && map._map[next.first][next.second] == 1) continue;
             if(closed.count(next))                      continue;
-            float cost = 0.0f;
-            if(dir.first != 0 && dir.second != 0) // Si es un movimiento diagonal
-                cost = CDiagonal; // Costo de movimiento diagonal
-            else
-                cost = COrtogonales; // Costo de movimiento ortogonal
 
-            float tentative_g = gCost[pos] + cost; // each step costs 1
-
-            // Solo agregamos a OPEN si encontramos un camino más barato hacia 'next'
-            if(!gCost.count(next) || tentative_g < gCost[next]){
-                gCost[next]    = tentative_g;
+            bool esDiagonal = (dir.first != 0 && dir.second != 0);
+            
+            float NuevoG = gCost[pos] + 
+            CalcularCostoMovimiento (map._map[pos.first][pos.second], map._map[next.first][next.second], 
+            esDiagonal, esAltura);
+            
+            if(!gCost.count(next) || NuevoG < gCost[next]){ // Costo de movimiento diagonal
+                gCost[next] = NuevoG;
                 pathCache[next] = pos;
-                float f = tentative_g + Heuristic(next, goal);
+                float f = NuevoG + Heuristic(next, goal);
                 OPEN.push({f, next});
+
             }
+            
         }
     }
 
@@ -276,7 +312,9 @@ vector<pair<int,int>> Search::WAstar(
     const Map& map,
     pair<int,int> start,
     pair<int,int> goal, 
-    float weight){
+    float weight, 
+    bool esAltura)
+{
 
     cout << "===========================\nEjecutando Weighted A* (w=" << weight << ")...\n";
     auto startTime = chrono::high_resolution_clock::now(); // Tiempo de Inicio
@@ -304,8 +342,8 @@ vector<pair<int,int>> Search::WAstar(
         if (pos == goal) // Si encontramos el objetivo, reconstruimos el camino y terminamos
         {
             auto endTime = chrono::high_resolution_clock::now(); // Tiempo de finalización
-            cout << " NODOS VISITADOS: " << closed.size() << endl; // Cantidad de nodos visitados
-            cout << "NODOS DISPONIBLES: "    << OPEN.size() << endl; // Cantidad de nodos aún por expandir
+            cout << "NODOS VISITADOS: " << closed.size() << endl; // Cantidad de nodos visitados
+            cout << "NODOS ABIERTOS: "    << OPEN.size() << endl; // Cantidad de nodos aún por expandir
             cout << "Encontrado en " << (endTime - startTime).count() / 1000000.0 << "ms\n"; // Tiempo total de ejecución en milisegundos
             return reconstruct(pathCache, pos); // Reconstrucción del camino desde el nodo objetivo hasta el nodo inicial
         }
@@ -318,22 +356,20 @@ vector<pair<int,int>> Search::WAstar(
             if (next.first < 0 || next.first >= map.h || next.second < 0 || next.second >= map.w)
                 continue;
 
-            if (map._map[next.first][next.second] == 1) continue; // Si el vecino es una pared, lo ignoramos
+            if (!esAltura && map._map[next.first][next.second] == 1) continue; // Si el vecino es una pared, lo ignoramos
             if (closed.count(next)) continue; // Si el vecino ya fue cerrado, lo ignoramos
-            float cost=0.0f;
-            if (dir.first != 0 && dir.second != 0) // Si es un movimiento diagonal
-                cost = CDiagonal; // Costo de movimiento diagonal
-            else
-                cost = COrtogonales; // Costo de movimiento ortogonal
-                
-            float tentative_g = gCost[pos] + cost; // Costo tentativo desde el inicio hasta el vecino
-
+            bool esDiagonal = (dir.first != 0 && dir.second != 0); // Determinamos si el movimiento es diagonal
+            float NCost = gCost[pos] + CalcularCostoMovimiento(
+                                        map._map[pos.first][pos.second], 
+                                        map._map[next.first][next.second],
+                                        esDiagonal, esAltura); // Cálculo del costo g para el vecino
+                                        
             // Solo agregamos a OPEN si encontramos un camino más barato hacia 'next'
-            if (!gCost.count(next) || tentative_g < gCost[next])
+            if (!gCost.count(next) || NCost < gCost[next])
             {
-                gCost[next] = tentative_g; // Actualizamos el costo g para el vecino
+                gCost[next] = NCost; // Actualizamos el costo g para el vecino
                 pathCache[next] = pos; // Actualizamos el padre del vecino en el cache de caminos
-                float f = tentative_g + weight * Heuristic(next, goal); // Cálculo de f = g + w * h
+                float f = NCost + weight * Heuristic(next, goal); // Cálculo de f = g + w * h
                 OPEN.push({f, next}); // Agregamos el vecino a la cola de prioridad
             }
 

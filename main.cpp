@@ -5,47 +5,63 @@
 #include <string>
 #include <stdexcept>
 
+using namespace std;
+
 // Returns true if the string represents a valid integer
-bool isInteger(const std::string& s){
+bool isInteger(const string& s){
     if(s.empty()) return false;
     size_t start = (s[0] == '-') ? 1 : 0;
     for(size_t i = start; i < s.size(); i++)
-        if(!std::isdigit(s[i])) return false;
+        if(!isdigit(s[i])) return false;
     return true;
 }
 
 int main(int argc, char *argv[]){
 
 
-    if(argc != 6){
-        std::cerr << "Uso: " << argv[0]
-                  << " <mapa.txt> <fila_inicio> <col_inicio> <fila_fin> <col_fin>\n";
+    if(argc != 7){
+        cerr << "Uso: " << argv[0]
+                  << " <mapa.txt> <fila_inicio> <col_inicio> <fila_fin> <col_fin> [altura]\n";
         return 1;
     }
 
 
     for(int i = 2; i <= 5; i++){
         if(!isInteger(argv[i])){
-            std::cerr << "Error: el argumento " << i
+            cerr << "Error: el argumento " << i
                       << " ('" << argv[i] << "') no es un entero valido.\n";
             return 1;
         }
     }
 
-    std::string mapFile = argv[1];
-    int x1 = std::atoi(argv[2]);
-    int y1 = std::atoi(argv[3]);
-    int x2 = std::atoi(argv[4]);
-    int y2 = std::atoi(argv[5]);
+    string mapFile = argv[1];
+    int x1 = atoi(argv[2]);
+    int y1 = atoi(argv[3]);
+    int x2 = atoi(argv[4]);
+    int y2 = atoi(argv[5]);
 
 
     Map map(mapFile);
     if(map == Map()){         
-        std::cerr << "Error: no se pudo cargar el mapa '" << mapFile << "'.\n";
+        cerr << "Error: no se pudo cargar el mapa '" << mapFile << "'.\n";
+        return 1;
+    }
+    if(x1 < 0 || x1 >= map.get_h() || y1 < 0 || y1 >= map.get_w() ||
+       x2 < 0 || x2 >= map.get_h() || y2 < 0 || y2 >= map.get_w()){
+        std::cerr << "Error: coordenadas fuera del mapa" << std::endl;
         return 1;
     }
 
-   
+   bool esAltura = (argc==7 && string(argv[6]) == "altura");
+
+   if(esAltura){
+        cout << "Modo Altura Activado" << endl;
+    }
+    else{
+        cout << "Modo Altura Desactivado" << endl;
+    }
+        
+ 
     ColorMap colorMap(map);
 
     // Print the raw map
@@ -64,11 +80,11 @@ int main(int argc, char *argv[]){
     colorMap.print(pathGreedy);
 
 
-    auto pathAstar = Search::Astar(map, {x1, y1}, {x2, y2});
+    auto pathAstar = Search::Astar(map, {x1, y1}, {x2, y2}, esAltura);
     std::cout << "Path length (A*): " << (int)pathAstar.size() - 1 << "\n";
     colorMap.print(pathAstar);
 
-    auto pathWAstar = Search::WAstar(map, {x1, y1}, {x2, y2}, 1.5f);
+    auto pathWAstar = Search::WAstar(map, {x1, y1}, {x2, y2}, 1.5f, esAltura);
     std::cout << "Path length (Weighted A*): " << (int)pathWAstar.size() - 1 << "\n";
     colorMap.print(pathWAstar);
 

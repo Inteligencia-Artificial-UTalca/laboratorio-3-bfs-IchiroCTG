@@ -19,7 +19,8 @@ public:
 
     void print() const;                               // imprime el mapa
     void print(std::vector<std::pair<int,int>>) const; // imprime el mapa con el camino
-
+    int get_h();
+    int get_w(); // retorna el valor del mapa en la posicion (x,y)
     friend bool operator==(const Map& lhs, const Map& rhs); // para comparar dos mapas
     friend class Search; // le doy acceso a Search para que pueda leer h, w y _map
 };

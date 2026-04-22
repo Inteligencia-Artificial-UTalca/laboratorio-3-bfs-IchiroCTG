@@ -50,13 +50,15 @@ public:
     static vector<pair<int,int>> Astar(
         const Map& map,
         pair<int,int> start,
-        pair<int,int> goal
+        pair<int,int> goal,
+        bool esAltura
     );
 
     static vector<pair<int,int>> WAstar(
         const Map& map,
         pair<int,int> start,
         pair<int,int> goal,
-        float weight // Peso para la heuristica, mayor a 1 hace que el algoritmo sea más agresivo hacia el objetivo
+        float weight,// Peso para la heuristica, mayor a 1 hace que el algoritmo sea más agresivo hacia el objetivo
+        bool esAltura 
     );
 };

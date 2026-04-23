@@ -66,27 +66,35 @@ int main(int argc, char *argv[]){
 
     // Print the raw map
     std::cout << "Mapa cargado:\n";
-    colorMap.print();
+   // colorMap.print();
 
 
     auto pathBFS = Search::BFS(map, {x1, y1}, {x2, y2});
+    cout << "Pasos:" << pathBFS.size() - 1 << endl;
+    cout << "Costo total: " << Search::calcularLargoCamino(map, pathBFS, esAltura) << endl;
     // Path length = number of steps (edges), which is nodes - 1
-    std::cout << "Path length (BFS): " << (int)pathBFS.size() - 1 << "\n";
-    colorMap.print(pathBFS);
+    //std::cout << "Path length (BFS): " << (int)pathBFS.size() - 1 << "\n";
+    //colorMap.print(pathBFS);
 
 
     auto pathGreedy = Search::Greedy(map, {x1, y1}, {x2, y2});
-    std::cout << "Path length (Greedy): " << (int)pathGreedy.size() - 1 << "\n";
-    colorMap.print(pathGreedy);
+    cout << "Pasos:" << pathGreedy.size() - 1 << endl;
+    cout << "Costo total: " << Search::calcularLargoCamino(map, pathGreedy, esAltura) << endl;
+    //std::cout << "Path length (Greedy): " << (int)pathGreedy.size() - 1 << "\n";
+    //colorMap.print(pathGreedy);
 
 
     auto pathAstar = Search::Astar(map, {x1, y1}, {x2, y2}, esAltura);
-    std::cout << "Path length (A*): " << (int)pathAstar.size() - 1 << "\n";
-    colorMap.print(pathAstar);
+    cout << "Pasos:" << pathAstar.size() - 1 << endl;
+    cout << "Costo total: " << Search::calcularLargoCamino(map, pathAstar, esAltura) << endl;
+    //std::cout << "Path length (A*): " << (int)pathAstar.size() - 1 << "\n";
+    //colorMap.print(pathAstar);
 
     auto pathWAstar = Search::WAstar(map, {x1, y1}, {x2, y2}, 1.5f, esAltura);
-    std::cout << "Path length (Weighted A*): " << (int)pathWAstar.size() - 1 << "\n";
-    colorMap.print(pathWAstar);
+    cout << "Pasos:" << pathWAstar.size() - 1 << endl;
+    cout << "Costo total: " << Search::calcularLargoCamino(map, pathWAstar, esAltura) << endl;
+    //std::cout << "Path length (Weighted A*): " << (int)pathWAstar.size() - 1 << "\n";
+    //colorMap.print(pathWAstar);
 
     return 0;
 }

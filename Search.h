@@ -61,4 +61,10 @@ public:
         float weight,// Peso para la heuristica, mayor a 1 hace que el algoritmo sea más agresivo hacia el objetivo
         bool esAltura 
     );
+
+    static float calcularLargoCamino(
+        const Map& map,
+        const std::vector<std::pair<int,int>>& camino,
+        bool esAltura
+    );
 };

@@ -384,3 +384,22 @@ vector<pair<int,int>> Search::WAstar(
     path.push_back(goal);
     return path;
 }
+
+float Search::calcularLargoCamino(
+    const Map& map,
+    const vector<pair<int,int>>& camino,
+    bool esAltura)
+{
+    float total = 0.0f;
+    for(int i = 0; i < (int)camino.size()-1; i++){
+        bool esDiagonal = (camino[i+1].first  != camino[i].first &&
+                           camino[i+1].second != camino[i].second);
+        total += CalcularCostoMovimiento(
+            map._map[camino[i].first][camino[i].second],
+            map._map[camino[i+1].first][camino[i+1].second],
+            esDiagonal,
+            esAltura
+        );
+    }
+    return total;
+}
